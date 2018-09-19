@@ -14,8 +14,8 @@
                     4. DG_LOG       --- Print log
     History       :
 ******************************************************************************/
-#ifndef _SP_DG_LOG_H_
-#define _SP_DG_LOG_H_
+#ifndef _DG_LOG_H_
+#define _DG_LOG_H_
 
 #ifdef __cplusplus
 extern "C" {
