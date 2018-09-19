@@ -1,5 +1,5 @@
 CC     := gcc
-TARGET := libspdglog.so
+TARGET := libdglog.so
 SRCS   := $(wildcard *.c)
 
 all: ${TARGET}
