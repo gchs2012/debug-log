@@ -22,7 +22,7 @@
 #include <sys/types.h>
 #include <sys/queue.h>
 
-#include "sp_dg_log.h"
+#include "dg_log.h"
 
 #define DG_LOG_FILE_PATH   256
 #define DG_LOG_ENTRY_MAX   512
