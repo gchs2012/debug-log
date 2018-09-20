@@ -13,9 +13,10 @@ int main(int argc, char *argv[])
     DG_LOG(LOG_NUM, "test code1!\n");
     DG_LOG(LOG_NUM, "test code2, num = %d\n", LOG_NUM);
     DG_LOG(LOG_NUM, "test code3, str = %s\n", "test code");
-    
+
     return 0;
 }
 
 [BUILD]
+
 gcc test.c -o test -ldglog
