@@ -170,6 +170,7 @@ int dg_log_init(const char *name, const char *file)
             var->index = i;
             TAILQ_INSERT_TAIL(free_head, var, next);
         }
+		dg_log_init_flag = 1;
     }
 
     snprintf(n_file, sizeof(n_file), "%s_%s.log", file, name);
