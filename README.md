@@ -6,7 +6,9 @@ int LOG_NUM = 0;
 
 int main(int argc, char *argv[])
 {
+
     LOG_NUM = DG_LOG_INIT(test, "test.log");
+
     DG_SET_MODE(LOG_NUM, DG_LOG_MODE_FILE);
     DG_SET_SIZE(LOG_NUM, 50);
 
