@@ -2,7 +2,7 @@
 
 int LOG_NUM = 0;
 
-int main(int argc, char *argv[])
+int main(int argc, char **argv) 
 {
 
     LOG_NUM = DG_LOG_INIT(test, "test.log");
