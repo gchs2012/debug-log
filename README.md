@@ -1,14 +1,5 @@
 # test libdglog.so
 
-// eg:
-//	    ......
-//      int log_num;
-//      log_num = DG_LOG_INIT(test_log_mod, "./test.log");
-//      ......
-//      DG_LOG(log_num, "Test debug_log_mod!\n");
-//      DG_LOG(log_num, "Test debug_log_mod id = %d\n", log_num);
-//      ......
-
 [CODE]
 
 int LOG_NUM = 0;
@@ -27,5 +18,4 @@ int main(int argc, char *argv[])
 }
 
 [BUILD]
-
 gcc test.c -o test -ldglog
