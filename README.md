@@ -25,5 +25,4 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-[BUILD]
-gcc test.c -o test -ldglog
+[BUILD]gcc test.c -o test -ldglog
