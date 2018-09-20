@@ -10,6 +10,7 @@
 //      ......
 
 [CODE]
+
 int LOG_NUM = 0;
 
 int main(int argc, char *argv[])
@@ -25,4 +26,6 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-[BUILD]gcc test.c -o test -ldglog
+[BUILD]
+
+gcc test.c -o test -ldglog
