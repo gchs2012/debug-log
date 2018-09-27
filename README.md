@@ -21,4 +21,6 @@ int main(int argc, char *argv[])
 ```
 
 ## [BUILD]<br>
-gcc test.c -o test -ldglog<br>
+```
+gcc test.c -o test -ldglog
+```
