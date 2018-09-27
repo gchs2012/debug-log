@@ -1,4 +1,4 @@
-# test libdglog.so
+# debug log
 
 ## [CODE]<br>
 
