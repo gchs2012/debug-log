@@ -361,7 +361,7 @@ void dg_log_print(int num, const char *function, unsigned int line,
     va_start(ap, format);
     vsnprintf(msg, sizeof(msg), format, ap);
     va_end(ap);
-    fprintf(fp, "[%s][%s:%d] %s", buf, function, line, msg);
+    fprintf(fp, "[%s][%s:%d] %s\n", buf, function, line, msg);
     fflush(fp);
     if (fp != stdout) fclose(fp);
 
