@@ -49,8 +49,8 @@ void dg_log_print(int num, const char *function,
 //      int log_num;
 //      log_num = DG_LOG_INIT(test_log_mod, "./test.log");
 //      ......
-//      DG_LOG(log_num, "Test debug_log_mod!\n");
-//      DG_LOG(log_num, "Test debug_log_mod id = %d\n", log_num);
+//      DG_LOG(log_num, "Test debug_log_mod!");
+//      DG_LOG(log_num, "Test debug_log_mod id = %d", log_num);
 //      ......
 
 /* init */
