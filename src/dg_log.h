@@ -80,6 +80,36 @@ void dg_log_print(int num, const char *function,
     if (dg_log_get_mode((_log_num)) != DG_LOG_MODE_DISABLE) \
         dg_log_print((_log_num), __FUNCTION__, __LINE__,  __VA_ARGS__); \
 } while (0)
+#define DG_LOG0(flag, log_num, fmt) \
+    if (flag) \
+        DG_LOG(log_num, fmt)
+#define DG_LOG1(flag, log_num, fmt, arg1) \
+    if (flag) \
+        DG_LOG(log_num, fmt, arg1)
+#define DG_LOG2(flag, log_num, fmt, arg1, arg2) \
+    if (flag) \
+        DG_LOG(log_num, fmt, arg1, arg2)
+#define DG_LOG3(flag, log_num, fmt, arg1, arg2, arg3) \
+    if (flag) \
+        DG_LOG(log_num, fmt, arg1, arg2, arg3)
+#define DG_LOG4(flag, log_num, fmt, arg1, arg2, arg3, arg4) \
+    if (flag) \
+        DG_LOG(log_num, fmt, arg1, arg2, arg3, arg4)
+#define DG_LOG5(flag, log_num, fmt, arg1, arg2, arg3, arg4, arg5) \
+    if (flag) \
+        DG_LOG(log_num, fmt, arg1, arg2, arg3, arg4, arg5)
+#define DG_LOG6(flag, log_num, fmt, arg1, arg2, arg3, arg4, arg5, arg6) \
+    if (flag) \
+        DG_LOG(log_num, fmt, arg1, arg2, arg3, arg4, arg5, arg6)
+#define DG_LOG7(flag, log_num, fmt, arg1, arg2, arg3, arg4, arg5, arg6, arg7) \
+    if (flag) \
+        DG_LOG(log_num, fmt, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+#define DG_LOG8(flag, log_num, fmt, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) \
+    if (flag) \
+        DG_LOG(log_num, fmt, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
+#define DG_LOG9(flag, log_num, fmt, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) \
+    if (flag) \
+        DG_LOG(log_num, fmt, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
 /********************************************************************/
 
 #ifdef __cplusplus
