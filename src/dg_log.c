@@ -18,23 +18,21 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <stdarg.h>
+#include <pthread.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/queue.h>
-
 #include "dg_log.h"
 
 #define DG_LOG_FILE_PATH   256
-#define DG_LOG_ENTRY_MAX   512
+#define DG_LOG_ENTRY_MAX   64
 
 struct dg_log_entry {
     TAILQ_ENTRY(dg_log_entry) next;
     int index;
     int mode;
     long size;
-    char name[DG_LOG_FILE_PATH];
     char file[DG_LOG_FILE_PATH];
-    char n_file[DG_LOG_FILE_PATH];
 };
 TAILQ_HEAD(dg_log_head, dg_log_entry);
 
@@ -55,35 +53,31 @@ static struct dg_log_entry g_dg_log_entry[DG_LOG_ENTRY_MAX];
 static struct dg_log_free_entry g_dg_log_free_entry[DG_LOG_ENTRY_MAX];
 
 /* Get the head node */
-#define DG_LOG_HEAD(_head)        \
-    (_head) = &g_dg_log_head
-#define DG_LOG_FREE_HEAD(_f_head) \
-    (_f_head) = &g_dg_log_free_head
+#define DG_LOG_HEAD(_head) (_head) = &g_dg_log_head
+#define DG_LOG_FREE_HEAD(_f_head) (_f_head) = &g_dg_log_free_head
 
 /* Get the node by subscript */
-#define DG_LOG_ENTRY_BY_INDEX(_elm, _index)      \
-    (_elm) = &g_dg_log_entry[(_index)]
-#define DG_LOG_FREE_ENTRY_BY_INDEX(_var, _index) \
-    (_var) = &g_dg_log_free_entry[(_index)]
+#define DG_LOG_ENTRY_BY_INDEX(_elm, _index) (_elm) = &g_dg_log_entry[(_index)]
+#define DG_LOG_FREE_ENTRY_BY_INDEX(_var, _index) (_var) = &g_dg_log_free_entry[(_index)]
 
 /* Initialize node */
-#define DG_LOG_ENTRY_INIT(_elm) do {    \
-    (_elm)->index = -1;                 \
-    (_elm)->mode = DG_LOG_MODE_STDOUT;  \
-    (_elm)->size = 50 * 1024 * 1024;    \
-    (_elm)->name[0] = '\0';             \
-    (_elm)->file[0] = '\0';             \
+#define DG_LOG_ENTRY_INIT(_elm) do {  \
+    (_elm)->index = -1;               \
+    (_elm)->mode = DG_LOG_MODE_FILE;  \
+    (_elm)->size = 10 * 1024 * 1024;  \
+    (_elm)->file[0] = '\0';           \
 } while (0)
 
+/* Log lock */
 typedef struct {
-	volatile int locked; /**< lock status 0 = unlocked, 1 = locked */
+#ifdef __x86_64__
+    volatile int locked; /**< lock status 0 = unlocked, 1 = locked */
+#else
+    pthread_mutex_t locked; /**< lock status 0 = unlocked, 1 = locked */
+#endif
 } dg_log_spinlock_t;
 
-/* Log lock */
-static dg_log_spinlock_t g_dg_log_lock = {
-    .locked = 0
-};
-
+static dg_log_spinlock_t g_dg_log_lock;
 static volatile int dg_log_init_flag = 0;
 
 /*****************************************************************************
@@ -98,21 +92,25 @@ static volatile int dg_log_init_flag = 0;
 static inline void
 dg_log_spinlock_lock(dg_log_spinlock_t *sl)
 {
-	int lock_val = 1;
-	asm volatile (
-			"1:\n"
-			"xchg %[locked], %[lv]\n"
-			"test %[lv], %[lv]\n"
-			"jz 3f\n"
-			"2:\n"
-			"pause\n"
-			"cmpl $0, %[locked]\n"
-			"jnz 2b\n"
-			"jmp 1b\n"
-			"3:\n"
-			: [locked] "=m" (sl->locked), [lv] "=q" (lock_val)
-			: "[lv]" (lock_val)
-			: "memory");
+#ifdef __x86_64__
+    int lock_val = 1;
+    asm volatile (
+            "1:\n"
+            "xchg %[locked], %[lv]\n"
+            "test %[lv], %[lv]\n"
+            "jz 3f\n"
+            "2:\n"
+            "pause\n"
+            "cmpl $0, %[locked]\n"
+            "jnz 2b\n"
+            "jmp 1b\n"
+            "3:\n"
+            : [locked] "=m" (sl->locked), [lv] "=q" (lock_val)
+            : "[lv]" (lock_val)
+            : "memory");
+#else
+    pthread_mutex_lock(&sl->locked);
+#endif
 }
 
 /*****************************************************************************
@@ -127,36 +125,43 @@ dg_log_spinlock_lock(dg_log_spinlock_t *sl)
 static inline void
 dg_log_spinlock_unlock(dg_log_spinlock_t *sl)
 {
-	int unlock_val = 0;
-	asm volatile (
-			"xchg %[locked], %[ulv]\n"
-			: [locked] "=m" (sl->locked), [ulv] "=q" (unlock_val)
-			: "[ulv]" (unlock_val)
-			: "memory");
+#ifdef __x86_64__
+    int unlock_val = 0;
+    asm volatile (
+            "xchg %[locked], %[ulv]\n"
+            : [locked] "=m" (sl->locked), [ulv] "=q" (unlock_val)
+            : "[ulv]" (unlock_val)
+            : "memory");
+#else
+    pthread_mutex_unlock(&sl->locked);
+#endif
 }
 
 /*****************************************************************************
     Prototype    : dg_log_init
     Description  : Init
-    Input        : const char *name
-                   const char *file
+    Input        : const char *file
     Output       : None
     Return Value : int
     Author       : zc
     Date         : 2018/8/2
 *****************************************************************************/
-int dg_log_init(const char *name, const char *file)
+int dg_log_init(const char *file)
 {
     int i;
     int num  = -1;
-    char n_file[DG_LOG_FILE_PATH];
     struct dg_log_entry *elm;
     struct dg_log_head *head;
     struct dg_log_free_entry *var;
     struct dg_log_free_head *free_head;
 
-    if (!name || !file) return -1;
+    if (!file) return -1;
 
+#ifndef __x86_64__
+    if (!dg_log_init_flag) {
+        pthread_mutex_init(&(g_dg_log_lock.locked), NULL);
+    }
+#endif
     dg_log_spinlock_lock(&g_dg_log_lock);
 
     DG_LOG_HEAD(head);
@@ -170,13 +175,11 @@ int dg_log_init(const char *name, const char *file)
             var->index = i;
             TAILQ_INSERT_TAIL(free_head, var, next);
         }
-		dg_log_init_flag = 1;
+        dg_log_init_flag = 1;
     }
 
-    snprintf(n_file, sizeof(n_file), "%s_%s.log", file, name);
-
     TAILQ_FOREACH(elm, head, next) {
-        if (!strcmp(elm->n_file, n_file)) {
+        if (!strcmp(elm->file, file)) {
             num = elm->index;
             goto unlock;
         }
@@ -186,9 +189,7 @@ int dg_log_init(const char *name, const char *file)
     if (var) {
         DG_LOG_ENTRY_BY_INDEX(elm, var->index);
         elm->index = var->index;
-        snprintf(elm->name, sizeof(elm->name), "%s", name);
         snprintf(elm->file, sizeof(elm->file), "%s", file);
-        snprintf(elm->n_file, sizeof(elm->n_file), "%s", n_file);
         TAILQ_INSERT_TAIL(head, elm, next);
 
         TAILQ_REMOVE(free_head, var, next);
@@ -217,7 +218,7 @@ void dg_log_set_mode(int num, int mode)
     struct dg_log_entry *elm;
     struct dg_log_head *head;
 
-    if (num < 0) return;
+    if ((num < 0) && (num > DG_LOG_ENTRY_MAX)) return;
 
     dg_log_spinlock_lock(&g_dg_log_lock);
 
@@ -248,7 +249,7 @@ int dg_log_get_mode(int num)
     struct dg_log_head *head;
     int mode = DG_LOG_MODE_DISABLE;
 
-    if (num < 0) return mode;
+    if ((num < 0) && (num > DG_LOG_ENTRY_MAX)) return mode;
 
     dg_log_spinlock_lock(&g_dg_log_lock);
 
@@ -281,7 +282,7 @@ void dg_log_set_size(int num, int size)
     struct dg_log_entry *elm;
     struct dg_log_head *head;
 
-    if (num < 0) return;
+    if ((num < 0) && (num > DG_LOG_ENTRY_MAX)) return;
 
     dg_log_spinlock_lock(&g_dg_log_lock);
 
@@ -303,6 +304,7 @@ void dg_log_set_size(int num, int size)
     Prototype    : dg_log_print
     Description  : Print log
     Input        : int num
+                   const char *file
                    const char *function
                    unsigned int line
                    const char *format
@@ -312,10 +314,10 @@ void dg_log_set_size(int num, int size)
     Author       : zc
     Date         : 2018/8/2
 *****************************************************************************/
-void dg_log_print(int num, const char *function, unsigned int line,
+void dg_log_print(int num, const char *file, const char *function, unsigned int line,
     const char *format, ...)
 {
-    if (num < 0) return;
+    if ((num < 0) && (num > DG_LOG_ENTRY_MAX)) return;
 
     dg_log_spinlock_lock(&g_dg_log_lock);
 
@@ -324,6 +326,12 @@ void dg_log_print(int num, const char *function, unsigned int line,
     struct stat stStat;
     struct dg_log_entry *elm;
     struct dg_log_head *head;
+
+    va_list ap;
+    char buf[128];
+    char msg[2048];
+    time_t tm_t;
+    struct tm *ttm = NULL;
 
     DG_LOG_HEAD(head);
 
@@ -335,25 +343,18 @@ void dg_log_print(int num, const char *function, unsigned int line,
 
     if (elm == NULL) goto unlock;
     if (elm->mode == DG_LOG_MODE_FILE) {
-        if (stat(elm->n_file, &stStat) != 0) {
+        if (stat(elm->file, &stStat) != 0) {
             if (errno == ENOENT) file_size = 0;
             else goto unlock;
         } else {
             file_size = stStat.st_size;
         }
         if (file_size > elm->size) {
-            if ((fp = fopen(elm->n_file, "w")) == NULL) goto unlock;
+            if ((fp = fopen(elm->file, "w")) == NULL) goto unlock;
         } else {
-            if ((fp = fopen(elm->n_file, "a")) == NULL) goto unlock;
+            if ((fp = fopen(elm->file, "a")) == NULL) goto unlock;
         }
     } else if (elm->mode == DG_LOG_MODE_DISABLE) goto unlock;
-
-    int len;
-    va_list ap;
-    char buf[128];
-    char msg[2048];
-    time_t tm_t;
-    struct tm *ttm = NULL;
 
     tm_t = time(NULL);
     ttm = localtime(&tm_t);
@@ -361,12 +362,11 @@ void dg_log_print(int num, const char *function, unsigned int line,
     va_start(ap, format);
     vsnprintf(msg, sizeof(msg), format, ap);
     va_end(ap);
-    fprintf(fp, "[%s][%s:%d] %s\n", buf, function, line, msg);
+    fprintf(fp, "[%s][%s:%d] %s", buf, function, line, msg);
     fflush(fp);
     if (fp != stdout) fclose(fp);
 
 unlock:
     dg_log_spinlock_unlock(&g_dg_log_lock);
-    return;
 }
 
