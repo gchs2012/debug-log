@@ -32,7 +32,7 @@ enum {
 
     // <------------------------------------------->
 
-#define SS_RESP_RESULT_INFO                            "Response message"
+#define SS_RESP_RESULT_INFO                             "Response message"
     SS_RESP_RESULT_TYPE,
 
     SS_MSG_TYPE_MAX,
@@ -42,11 +42,11 @@ enum {
 #define SS_GET_MSG_INFO(_type_) ({ \
     const char *_msg_ = NULL; \
     switch (_type_) { \
-        case SS_AAA_LOG_ENABLE_TYPE:                (_msg_) = SS_AAA_LOG_ENABLE_INFO; break; \
-        case SS_AAA_LOG_DISABLE_TYPE:               (_msg_) = SS_AAA_LOG_DISABLE_INFO; break; \
-        case SS_BBB_LOG_ENABLE_TYPE:                (_msg_) = SS_BBB_LOG_ENABLE_INFO; break; \
-        case SS_BBB_LOG_DISABLE_TYPE:               (_msg_) = SS_BBB_LOG_DISABLE_INFO; break; \
-        case SS_RESP_RESULT_TYPE:                  (_msg_) = SS_RESP_RESULT_INFO; break; \
+        case SS_AAA_LOG_ENABLE_TYPE:                    (_msg_) = SS_AAA_LOG_ENABLE_INFO; break; \
+        case SS_AAA_LOG_DISABLE_TYPE:                   (_msg_) = SS_AAA_LOG_DISABLE_INFO; break; \
+        case SS_BBB_LOG_ENABLE_TYPE:                    (_msg_) = SS_BBB_LOG_ENABLE_INFO; break; \
+        case SS_BBB_LOG_DISABLE_TYPE:                   (_msg_) = SS_BBB_LOG_DISABLE_INFO; break; \
+        case SS_RESP_RESULT_TYPE:                       (_msg_) = SS_RESP_RESULT_INFO; break; \
     } \
     _msg_; })
 
